@@ -188,6 +188,10 @@ def load_metrics():
                     ("mix_e40", XDM / "mix" / "mix_report_e40.json")]:
         if fn.exists():
             m[key] = json.loads(fn.read_text(encoding="utf-8"))
+    for key, fn in [("cer_e20", XDM / "song_cer_e20ir075.json"),
+                    ("cer_e40", XDM / "song_cer_e40ir0.json")]:
+        if fn.exists():
+            m[key] = json.loads(fn.read_text(encoding="utf-8"))
     return m
 
 
@@ -368,6 +372,8 @@ def build_metrics_table(m):
 
     mx20 = m.get("mix_e20", {})
     mx40 = m.get("mix_e40", {})
+    cer20 = m.get("cer_e20", {}).get("src_vs_conv", {})
+    cer40 = m.get("cer_e40", {}).get("src_vs_conv", {})
 
     rows = [
         "<tr><th>条目</th><th>D1 八度错帧</th><th>D3 跑调帧</th><th>D4 偏低帧</th>"
@@ -385,6 +391,17 @@ def build_metrics_table(m):
 <tr><td>人声配比（实测原曲）</td><td class="num">{mx20.get('vocal_db_actual','—')} dB</td><td class="num">{mx40.get('vocal_db_actual','—')} dB</td></tr>
 <tr><td>侧链让位</td><td class="num">{mx20.get('duck_min_db','—')} dB</td><td class="num">{mx40.get('duck_min_db','—')} dB</td></tr>
 <tr><td>静音占比</td><td class="num">{mx20.get('silent_ratio','—')} %</td><td class="num good">{mx40.get('silent_ratio','—')} %</td></tr>
+</table>
+<table>
+<tr><th>ASR 回读 CER（整曲 · faster-whisper small）</th><th>e20 + index 0.75</th><th>e40 + index 0</th><th>怎么读</th></tr>
+<tr><td>汉字 CER</td><td class="num">{cer20.get('han_cer','—')}</td>
+    <td class="num good">{cer40.get('han_cer','—')}</td>
+    <td rowspan="3">★ 唱歌的 ASR 绝对 CER 必然很难看（不是换声的锅）。<b>只看相对差</b>：
+        以「源音频自己的 ASR」为参照，新版三项全部下降 ⇒ 本轮改动没伤可懂度。</td></tr>
+<tr><td>拼音 CER（同音字不罚）</td><td class="num">{cer20.get('pinyin_cer','—')}</td>
+    <td class="num good">{cer40.get('pinyin_cer','—')}</td></tr>
+<tr><td>声调 CER（只比调号）</td><td class="num">{cer20.get('tone_cer','—')}</td>
+    <td class="num good">{cer40.get('tone_cer','—')}</td></tr>
 </table>
 <table>
 <tr><th>音准（e40 + index 0）</th><th>数值</th><th>怎么读</th></tr>

@@ -5,10 +5,18 @@
   <rvc-venv>/Scripts/python.exe svc_rvc.py --port 8789 \
       --model <model.pth> --index <added.index>
 
-请求：POST /convert {"in": "...wav", "out": "...wav", "index_rate": 0.75, "pitch": 0}
+请求：POST /convert {"in": "...wav", "out": "...wav", "index_rate": 0, "pitch": 0}
 响应：{"ok": true, "ms": 387, "out": "..."}
 
 ⚠ 实测坑：faiss 打不开含中文的 index 路径 → 启动时把模型/索引按 ASCII 名软链或复制到 mirrors/。
+
+⚠⚠ **默认 index_rate=0（不是 0.75）**：added 索引是按语料音域建的，
+   语料缺 700 Hz+ 的帧时，高音查询帧会被检索到**低八度邻居** ⇒ 出现「高音降八度/掉音」。
+   实测（《下等马》115.7 s 段，源 783.6 Hz）：
+       index_rate=0.75 → 410.5 Hz（降八度）   index_rate=0 → 769.7 Hz（正确）
+   且 index_rate=0 的音色保真**不降反升**（LTAS 相关 0.7356 vs 0.7283，
+   300–3000 Hz 频带误差 +1.65/+1.13 dB → +0.90/+0.36 dB）。
+   ⇒ 语料音域窄时，关索引是纯收益。仅当语料覆盖了源曲音域，才建议开回 0.75。
 
 路径不写死：RVCX_REPO / RVCX_FFMPEG_DIR 环境变量优先，其次 rvcx.paths，最后按 cwd 推断。
 """
@@ -127,7 +135,7 @@ class H(BaseHTTPRequestHandler):
             return self._json(400, {"error": "bad json"})
         try:
             with LOCK:
-                r = convert(req["in"], req["out"], float(req.get("index_rate", 0.75)),
+                r = convert(req["in"], req["out"], float(req.get("index_rate", 0.0)),
                             int(req.get("pitch", 0)))
         except Exception as e:
             return self._json(500, {"error": f"{type(e).__name__}: {e}"})

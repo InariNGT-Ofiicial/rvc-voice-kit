@@ -1,0 +1,28 @@
+# rvcx 本地配置样例
+#
+# 用法：复制为 rvcx.local.toml（已在 .gitignore 里），按本机实际情况填。
+# 优先级：环境变量 > 本文件 > 相对 ROOT 的中性默认值。
+# 所有键都可缺省；缺省时用默认值。
+
+# ---- 必需三件套 ------------------------------------------------------------
+root   = "E:/AI-RVC"          # 工作根：venv、repo、实验产物都在它下面
+repo   = "E:/AI-RVC/repo"     # 上游 RVC clone
+python = "E:/AI-RVC/venv/Scripts/python.exe"
+
+# ---- 资产 ------------------------------------------------------------------
+# ffmpeg.exe / ffprobe.exe 所在目录。RVC 的 preprocess 写死 cmd=["ffmpeg"]，
+# 不把它挂进子进程 PATH 就会报「找不到文件」，且错误信息很像输入损坏。
+ffmpeg_dir = ""
+
+models  = "E:/AI-RVC/models"  # 每个音色一个子目录：model.pth + added_*.index
+dataset = "E:/AI-RVC/dataset" # 训练集根目录
+refdir  = ""                  # LTAS 参考集（通常就是目标角色的训练集）
+work    = "E:/AI-RVC"         # 实验产物根目录（dialogue/ probe/ cache/ report/）
+
+# ---- 可选：台词实验的 TTS 引擎（不做就别填）--------------------------------
+cosy_dir   = ""               # CosyVoice2 安装目录
+cosy_ref   = ""               # 参考音色 wav
+sovits_dir = ""               # GPT-SoVITS 安装目录
+
+# ---- 可选：DDSP-SVC 对拍 ---------------------------------------------------
+ddsp_root = ""

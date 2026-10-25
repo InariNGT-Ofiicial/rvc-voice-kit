@@ -1,0 +1,43 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# ---- 本机配置（含私有路径，勿提交）----
+rvcx.local.toml
+rvcx.local.*.toml
+!rvcx.local.example.toml
+
+# ---- 上游 RVC 与虚拟环境（按 setup.ps1 自行 clone）----
+repo/
+venv/
+.venv/
+
+# ---- 权重与音频（见 models/INDEX.md 说明）----
+*.pth
+*.pt
+*.index
+*.wav
+*.flac
+*.mp3
+*.m4a
+
+# ---- 实验产物 ----
+cache/
+logs/
+probe/
+report/
+dataset/
+dialogue/
+dialogue_zh/
+projects/
+out/
+_shot/
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

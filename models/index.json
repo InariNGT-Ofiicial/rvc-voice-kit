@@ -1,0 +1,185 @@
+{
+  "count": 3,
+  "models": [
+    {
+      "voice": "芳乃（Senren*Banka）",
+      "engine": "RVC-WebUI 2.3.260718",
+      "engine_commit": null,
+      "format": "v2",
+      "sample_rate": "48k",
+      "if_f0": 1,
+      "epochs": 120,
+      "global_step": 13440,
+      "batch_size": 4,
+      "train_data": {
+        "files": 358,
+        "minutes": 24.8,
+        "slices": 445,
+        "f0_method": "rmvpe"
+      },
+      "infer": {
+        "f0_method": "rmvpe",
+        "index_rate": 0.75,
+        "protect": 0.33,
+        "pitch": 0,
+        "cmd": "python -m infer.cli --model <本目录>/model.pth --index <本目录>/added_*.index --input <干声目录> --output <输出目录> --f0-method rmvpe --index-rate 0.75 --format wav --overwrite"
+      },
+      "measured": {
+        "probe": "《下等马》分离干声 3 段 × 15s（原唱泠鸢，非芳乃）",
+        "reference": "芳乃数据集 25 条的平均 LTAS，本人自测上限 r=0.9863",
+        "ltas_r_src": 0.9512,
+        "ltas_r_out": 0.992,
+        "delta_r": 0.0409,
+        "f0_median_diff_hz": -3.9,
+        "peak": 0.7833,
+        "exact_zero_ratio": 0.0,
+        "ddsp_20000_baseline": {
+          "ltas_r_out": 0.9323,
+          "delta_r": -0.0189,
+          "note": "同源同参考集，DDSP 反而远离目标"
+        },
+        "source": "manifest.measured",
+        "index_rate": 0.75
+      },
+      "perf": {
+        "gpu": "RTX 5060 Laptop 8G (sm_120)",
+        "infer_15s_seconds": 5.35,
+        "train_minutes_per_epoch": 1.09,
+        "train_total_hours": 4.35
+      },
+      "caveats": [
+        "200 轮与 120 轮的客观指标差异在噪声内（Δr 0.9885~0.9920），轮次不是瓶颈；听感才是最终仲裁",
+        "index_rate 升高时 LTAS 略升、但朝目标 MFCC 距离反而上升，两指标冲突；0.75 是折中默认",
+        "LTAS 是长时平均谱，判「音色方向」可靠，判「自然度」不可靠"
+      ],
+      "id": "芳乃_RVC_步数120",
+      "model": {
+        "file": "model.pth",
+        "bytes": 57589887,
+        "sha256": "19bb2bf3b9205283e97ad61bdababea2ea2885af5bec69d8f0fb118776f47929"
+      },
+      "index": {
+        "file": "added_IVF1419_Flat_nprobe_1_fangno_p2_v2.index",
+        "bytes": 174910259,
+        "sha256": "725e277426dc8bd42dac78483283d0d487aeab3afba7a86f35ab7e9976ce686f",
+        "note": "只认 added_*；trained_* 是中间产物"
+      }
+    },
+    {
+      "voice": "芳乃（Senren*Banka）",
+      "engine": "RVC-WebUI 2.3.260718",
+      "engine_commit": null,
+      "format": "v2",
+      "sample_rate": "48k",
+      "if_f0": 1,
+      "epochs": 200,
+      "global_step": 22400,
+      "batch_size": 4,
+      "train_data": {
+        "files": 358,
+        "minutes": 24.8,
+        "slices": 445,
+        "f0_method": "rmvpe"
+      },
+      "infer": {
+        "f0_method": "rmvpe",
+        "index_rate": 0.75,
+        "protect": 0.33,
+        "pitch": 0,
+        "cmd": "python -m infer.cli --model <本目录>/model.pth --index <本目录>/added_*.index --input <干声文件或目录> --output <输出> --f0-method rmvpe --index-rate 0.75 --format wav --overwrite"
+      },
+      "measured": {
+        "probe": "《下等马》分离干声 3 段 × 15s（原唱泠鸢，非芳乃）",
+        "ltas_r_src": 0.9512,
+        "ltas_r_out": 0.9885,
+        "delta_r": 0.0374,
+        "exact_zero_ratio": 0.0,
+        "source": "manifest.measured.singing（唱歌探针）",
+        "f0_median_diff_hz": -3.1333,
+        "peak": 0.7579,
+        "index_rate": 0.75
+      },
+      "perf": {
+        "gpu": "RTX 5060 Laptop 8G (sm_120)",
+        "train_minutes_per_epoch": 1.09,
+        "train_total_hours": 4.35
+      },
+      "caveats": [
+        "与步数120 相比：Δr 差异在噪声内（.0911 vs .0912），但台词 CER 反而略差（.0581 vs .0375）⇒ 客观指标分不出高低",
+        "主人实际听感：e200 略好于 e120，但边际收益很低（4 小时换一点点）⇒ 要质感取本模型，要性价比取步数120",
+        "LTAS 被录音信道主导：与目标同信道（同游戏原声）时源本身 r 已达 .9629，Δr 无分辨力，不能跨信道比较",
+        "台词场景必须另看 ASR 回读 CER，Δr 只测音色不测可懂度"
+      ],
+      "id": "芳乃_RVC_步数200",
+      "model": {
+        "file": "model.pth",
+        "bytes": 57589887,
+        "sha256": "536379c47f141a6dbab21fc4383c48a8239377b74d15de428895df306db71366"
+      },
+      "index": {
+        "file": "added_IVF1419_Flat_nprobe_1_fangno_p2_v2.index",
+        "bytes": 174910259,
+        "sha256": "725e277426dc8bd42dac78483283d0d487aeab3afba7a86f35ab7e9976ce686f",
+        "note": "只认 added_*；trained_* 是中间产物"
+      }
+    },
+    {
+      "voice": "芳乃",
+      "engine": "rvc",
+      "engine_commit": "81eed5e",
+      "format": "v2",
+      "sample_rate": "48k",
+      "if_f0": 1,
+      "epochs": 50,
+      "global_step": 5600,
+      "batch_size": 4,
+      "train_data": {
+        "files": 358,
+        "minutes": 24.8,
+        "slices": 445,
+        "f0_method": "pm"
+      },
+      "infer": {
+        "f0_method": "rmvpe",
+        "index_rate": 0.75,
+        "protect": 0.33,
+        "pitch": 0
+      },
+      "measured": {
+        "ltas_r_src": 0.9477,
+        "ltas_r_out": 0.9926,
+        "f0_median_diff_hz": -1.9,
+        "peak": 0.797,
+        "exact_zero_ratio": 0.0,
+        "mfcc_l2": 46.659,
+        "delta_r": 0.04490000000000005,
+        "source": "manifest.probe_metrics（旧 schema）"
+      },
+      "perf": {
+        "preprocess_s": 24.5,
+        "extract_f0_s": 12.2,
+        "extract_hubert_s": 77.0,
+        "train_s_per_epoch": 57,
+        "train_total_min": 47,
+        "index_s": 11.1,
+        "infer_s_15s_audio": 18.6,
+        "trained_at": "2026-10-25T13:53:22+08:00"
+      },
+      "caveats": [
+        "50 epoch 仅用于验证链路与方向，不是可交付音质。正式使用建议 ≥150-200 epoch 并用 rmvpe 训练。"
+      ],
+      "id": "芳乃_RVC_步数50",
+      "model": {
+        "file": "model.pth",
+        "bytes": 57588961,
+        "sha256": "a767e4265455ec6a6c1798dc686306ad25dc4b8335fd355570f2b001df1f799e"
+      },
+      "index": {
+        "file": "added_IVF1419_Flat_nprobe_1_fangno_p1_v2.index",
+        "bytes": 174910259,
+        "sha256": "ee6f697a74b82f7ee2eb34a0734641360dc7b36e96e3f7c0de1dd278c2312044",
+        "note": "只认 added_*；trained_* 是中间产物"
+      }
+    }
+  ]
+}

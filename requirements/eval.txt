@@ -1,0 +1,25 @@
+# 评测侧依赖（TTS 源生成 + ASR 可懂度）
+#
+# 这套依赖与本仓库的换声主链（rvcx.voice / scripts/train / scripts/eval）分开装：
+# 换声要 torch + cu128 + RVC 上游，评测只需要 CPU 上的 whisper 和拼音工具。
+# 两套装进一个 venv 会互相顶版本（尤其 numpy 与 ctranslate2）。
+#
+# 装法：
+#   python -m venv env-eval
+#   env-eval/Scripts/pip install -r requirements/eval.txt
+#
+# 本机实测版本（Windows / Python 3.12）：
+#   faster-whisper 1.2.1  -- ASR 回读算 CER（scripts/dialogue/dialogue_cer*.py）
+#   ctranslate2    4.8.2  -- faster-whisper 后端
+#   pypinyin       0.55.0 -- 拼音 CER 与声调 CER（同音字不罚）
+#   numpy          1.26.4 -- 与 RVC 侧一致，避免 npy 互读出问题
+#   librosa        0.10.2 -- 声调曲线分析（该 env 若也跑 metrics）
+#
+# 注意：dialogue_metrics*.py 用的是 RVC 侧的 librosa + rmvpe，不在这个 env 里跑；
+#       dialogue_cer*.py 用 whisper，在这个 env 里跑。分工见 README「两套环境」。
+
+faster-whisper>=1.1,<2
+pypinyin>=0.50,<1
+numpy>=1.26.4,<2
+librosa>=0.10.2,<0.11
+soundfile>=0.13,<1

@@ -25,16 +25,17 @@ venv/
 *.m4a
 
 # ---- 实验产物 ----
-cache/
-logs/
-probe/
-report/
-dataset/
-dialogue/
-dialogue_zh/
-projects/
-out/
-_shot/
+# ★ 必须带前导 / 锚定仓库根：写 `dialogue/` 会连 scripts/dialogue/ 一起排掉
+/cache/
+/logs/
+/probe/
+/report/
+/dataset/
+/dialogue/
+/dialogue_zh/
+/projects/
+/out/
+/_shot/
 
 # ---- 编辑器 / 系统 ----
 .vscode/

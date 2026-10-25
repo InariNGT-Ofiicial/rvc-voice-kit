@@ -1,0 +1,20 @@
+# dsh-plugin-voice-say 的 bundle patch
+#
+# 叠加顺序：dsh-base → dsh-web-app → 本 bundle patch → profile 的 cordis.patch.yml → --patch
+# 注意：patch 会**整行替换**目标行的 config，故此处列出本插件所需的全部键。
+- insert:
+    - id: voice-say
+      name: 'dsh-plugin-voice-say'
+      config:
+        # ── 两个常驻服务（必须已在跑，否则 voice_say 直接报错）────────────
+        ttsUrl: 'http://127.0.0.1:8788/say'      # CosyVoice 常驻（CosyVoice env）
+        rvcUrl: 'http://127.0.0.1:8789/convert'  # RVC 常驻（E:/AI-RVC/venv）
+
+        # ── 产物目录：留空 = <agent cwd>/tts ────────────────────────────
+        # 必须落在 qqbot_send_file 的白名单内（media 目录 / agent cwd / extraRoots）
+        outDir: ''
+
+        # ── 文本与超时 ────────────────────────────────────────────────
+        maxChars: 80
+        timeoutMs: 120000
+        keepIntermediate: false

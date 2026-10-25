@@ -1,0 +1,16 @@
+{
+  "name": "dsh-plugin-voice-say",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DSH tool: synthesize text into the configured character voice (local TTS + RVC) and hand back a sendable wav path",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "keywords": ["deepseek-harness", "dsh", "cordis", "plugin", "tts", "rvc", "voice"],
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } },
+  "peerDependencies": { "@deepseek-ai/cordis": ">=4.0.1" },
+  "peerDependenciesMeta": { "@deepseek-ai/cordis": { "optional": true } },
+  "files": ["src/*.js", "cordis.patch.yml", "README.md"]
+}

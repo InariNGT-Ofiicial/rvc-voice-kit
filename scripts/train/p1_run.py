@@ -75,7 +75,7 @@ def count(d, pat="*"):
 
 
 def step_prep(a):
-    if count(LOGDIR / "1_16k_wavs", "*.wav") > 50:
+    if count(LOGDIR / "1_16k_wavs", "*.wav") > a.min_slices:
         print(f"[prep] 已存在 {count(LOGDIR / '1_16k_wavs', '*.wav')} 个切片，跳过")
         return True
     sr = 48000 if a.sr == "48k" else 40000
@@ -86,8 +86,8 @@ def step_prep(a):
     n = count(LOGDIR / "1_16k_wavs", "*.wav")
     print(f"[prep] 切片产出 {n} 个")
     # ★ preprocess.py 内部吞异常、退出码仍为 0，只能靠数产物判断
-    if n < 50:
-        print(f"[prep] 产出过少（{n}），按失败处理", file=sys.stderr)
+    if n < a.min_slices:
+        print(f"[prep] 产出过少（{n} < {a.min_slices}），按失败处理", file=sys.stderr)
         return False
     return ok
 
@@ -223,6 +223,9 @@ def main():
     ap.add_argument("--se", type=int, default=10, help="每 N epoch 存一次")
     ap.add_argument("--bs", type=int, default=4)
     ap.add_argument("--np", default="8", help="预处理进程数")
+    # ★ 50 是生产阈值（24.8 min 训练集能切出 445 片）。做小规模探针时按比例调低，
+    #   否则数据链明明通了也会被判失败——「产出过少」这个门是防静默失败，不是技术下限。
+    ap.add_argument("--min-slices", type=int, default=50, help="切片数下限，低于此判失败")
     ap.add_argument("--f0method", default="pm", choices=["pm", "rmvpe"])
     ap.add_argument("--exp", default=None, help="实验名（logs/<exp>），不同轮次务必分开")
     ap.add_argument("--data", default=None, help="训练集目录，默认 <DATASET>/fangno")

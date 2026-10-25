@@ -1,0 +1,7 @@
+name: astrbot_plugin_voice_patch
+display_name: 本地音色语音补丁
+desc: 把 LLM 回复按会话/关键词转成本机 RVC 音色语音（在 on_decorating_result 里追加 Comp.Record）
+version: 0.1.0
+author: rvc-research
+repo: ""
+short_desc: 按群/关键词把回复转成现有 RVC 音色语音

@@ -43,14 +43,20 @@ rvcx/
   paths.py          所有外部路径的唯一出口（环境变量 > rvcx.local.toml > 默认）
   voice.py          换声入口：convert / list / doctor
 scripts/
-  train/            p1_run.py 六段编排 · p2_launch.py 脱离进程 · status.py 进度 · extract_small.py 导出
+  dataset/          语料生成（声韵母覆盖均衡）· 批量合成（edge / CosyVoice，含写盘前 dtype/峰值闸）
+  train/            p1_run.py 六段编排 · launch_train.py 脱离进程 · p2_launch.py · status.py 进度 · extract_small.py 导出
   eval/             sweep.py 参数网格 · compare_ddsp.py 对拍 · ltas_check.py 音色位移 · ab_make.py 试听
   dialogue/         台词实验：TTS 源 → 换声 → 指标 → ASR/CER → 对照页
+  service/          常驻服务：svc_tts（TTS）· svc_rvc（换声）· svc_openai_shim（OpenAI 兼容门面）
+  bench/            延迟基准：TTS / RVC / SILK / 端到端
   diag/             疑难排查（f0 估计器对比等）
 models/
   INDEX.md          模型索引（人读）
   index.json        模型索引（机读，含 sha256）
   measurements/     原始测量数据（检查点横评、DDSP 对拍）
+packages/
+  dsh-plugin-voice-say/     DSH 插件：voice_say 工具（文本 → 目标音色 wav）
+  astrbot_plugin_voice_patch/  AstrBot 插件：语音回复
 docs/
   RVC换声插件方案.md  完整技术报告：源码分析、架构建议、全部实测
   判据手册.md        每个指标能证明什么、不能证明什么
@@ -63,6 +69,49 @@ requirements/
   eval.txt          评测侧依赖（单独 env）
 setup.ps1           一键拉取上游 + 建 venv + 装依赖
 ```
+
+---
+
+## 常驻服务：把「文本」变成「目标音色语音」
+
+接入聊天端（dsh-qq / AstrBot）时，**别让每条回复都起一次进程**——模型加载占了大头。
+拆成两个常驻 HTTP 服务，模型只加载一次：
+
+```
+:8788  svc_tts.py     TTS      （跑在 TTS 那个 env）
+:8789  svc_rvc.py     换声     （跑在 RVC 那个 env）
+```
+
+两者的 env **不能合并**（TTS env 没有 faiss/rmvpe，RVC env 没有 cosyvoice）。
+
+```bash
+# TTS 服务
+<TTS-env>/python scripts/service/svc_tts.py --port 8788 \
+    --src-root <CosyVoice 源码目录> --prompt <参考音色 wav>
+
+# 换声服务（RVC env）
+<RVC-env>/python scripts/service/svc_rvc.py --port 8789 \
+    --model <model.pth> --index <added.index>
+```
+
+调用：
+
+```bash
+curl -X POST 127.0.0.1:8788/say -H 'Content-Type: application/json' \
+     -d '{"text":"你好"}' -o tts.wav
+curl -X POST 127.0.0.1:8789/convert -H 'Content-Type: application/json' \
+     -d '{"in":"tts.wav","out":"rvc.wav","index_rate":0.75,"pitch":0}'
+```
+
+`svc_openai_shim.py` 把同一条链包成 OpenAI 兼容的 `POST /v1/audio/speech`，
+AstrBot 的内置 `openai_tts_api` provider 可以直接指过去，**不需要写 AstrBot 插件**。
+
+两个必须知道的坑：
+
+1. **faiss 打不开含中文的 index 路径**——只打 traceback 然后**静默按 index_rate=0 跑**，
+   表现为「换声质量莫名下降」。`svc_rvc.py` 启动时会把模型/索引复制到 ASCII 目录来绕过。
+2. **产物必须落在 agent 的 cwd 里**——dsh-qq 的 `sendFile.restrictPaths` 只放行
+   `media` 目录 + `config.cwd` + `extraRoots`，生成到别处会被工具直接拒绝。
 
 ---
 
@@ -128,6 +177,42 @@ RVC 的 `exact_zero_ratio = 0.0` 意味着**不需要补气口工序**，这是�
 > ★★ **声调保住靠的是 `pitch 0` 这个工程约定**（f0 直接由源音频驱动），
 > 不是模型懂汉语。启用 pitch shift 变调时，只能保住轮廓、丢掉音区；
 > **中文唱歌必须单独验证。**
+
+---
+
+## 用 TTS 音色造一个 RVC 模型
+
+手上有的是一个 **TTS 音色**（例如某个克隆音色），只有十几秒参考音，
+但想要一个能换声的 RVC 模型——这条路走得通，关键是**先用 TTS 批量造语料**。
+
+```bash
+# ① 造语料：按声韵母覆盖 + 句长分布生成句子表（避免全是枚举句）
+python scripts/dataset/gen_corpus.py --out E:/AI-RVC/corpus/myvoice --sentences 300
+
+# ② 批量合成：edge / CosyVoice 双后端，写盘前有 dtype+峰值+静音三道闸
+python scripts/dataset/synth_corpus.py --backend edge \
+    --texts E:/AI-RVC/corpus/myvoice/text.txt --out E:/AI-RVC/dataset/myvoice
+
+# ③ 训练（先跑数据链，再训）
+python scripts/train/p1_run.py --exp myvoice --data E:/AI-RVC/dataset/myvoice \
+    --steps prep,f0,feat,list --f0method rmvpe
+python scripts/train/launch_train.py --exp myvoice --data E:/AI-RVC/dataset/myvoice \
+    --epochs 150 --steps train,index,infer
+```
+
+三条必须记住的：
+
+1. **参考音 14 秒不够训模型，但够做 TTS 的参考音。**
+   所以第一步是用 TTS 把语料「扩」到 20 分钟以上，模型训的是这个音色。
+2. **写盘前必须查 dtype 和峰值。** TTS 返回的常常是 int16 量级的数组，
+   按 float 写 PCM_16 会硬削顶，谐波污染 HuBERT ⇒ 换声后 CER 直接 1.0。
+   `synth_corpus.py` 内置了这道闸。
+3. ★ **同源自测会骗人。** 训练集和测试集都来自同一个 TTS 时，
+   它们共享同一个带宽指纹（24 kHz 源在 15 kHz 以上是数字静音），
+   Δr 会虚高十几 dB 的量级。**交叉验证集必须用另一个引擎合成**，
+   并且必须做一次真人干声通道的测试。
+
+完整方案与实测见 [`docs/DS娘RVC模型制作方案.md`](docs/DS娘RVC模型制作方案.md)。
 
 ---
 

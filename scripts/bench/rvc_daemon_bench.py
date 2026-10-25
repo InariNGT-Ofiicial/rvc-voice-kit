@@ -37,7 +37,9 @@ def main():
     ap.add_argument("--input", required=True)
     ap.add_argument("--outdir", required=True)
     ap.add_argument("--runs", type=int, default=3)
-    ap.add_argument("--index-rate", type=float, default=0.75)
+    # ★ 默认 0（不是 0.75）：added 索引在高音帧会匹配到低八度邻居，
+    #   令 RVC 照着错音高合成（ir=0 → 769.7 Hz 正确；ir=0.75 → 410.5 Hz 低八度）。
+    ap.add_argument("--index-rate", type=float, default=0.0)
     a = ap.parse_args()
     Path(a.outdir).mkdir(parents=True, exist_ok=True)
 

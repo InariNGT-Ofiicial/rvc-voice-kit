@@ -9,8 +9,15 @@
 
 用法：
   python p3_xdm_cover.py --model <weights.pth> --index <index> [--outdir DIR]
-                         [--tag e20] [--index-rate 0.75] [--protect 0.33]
+                         [--tag e20] [--index-rate 0] [--protect 0.33]
                          [--pitch 0] [--f0-method rmvpe]
+
+★★ **index_rate 默认必须是 0**（2026-10-26 修正）：
+  added_IVF1929 检索在高音帧会匹配到**低八度**的相似向量，RVC 照着错音高合成。
+  实测同一 15 s 窗口：index_rate=0 → 769.7 Hz（正确）；=0.75 → 410.5 Hz（低八度）。
+  整曲逐帧 f0 对照：e20+0.75 的 D1 八度错 136 帧 / 缺陷总时长 4.02 s，
+  而 e40+index0 是 41 帧 / 1.93 s。**带索引跑整曲 = 把高音补正成果全部推翻。**
+  ⇒ 即使传了 --index，也请显式加 --index-rate 0。
 """
 from __future__ import annotations
 
@@ -131,7 +138,7 @@ def main():
     ap.add_argument("--index", default=r"E:\AI-RVC\repo\assets\indices\dsxiaoyi_a3_v1_added_IVF1929_Flat_nprobe_1_dsxiaoyi_a3_v1_v2.index")
     ap.add_argument("--outdir", default=r"E:\AI-RVC\work\dsx_xdm")
     ap.add_argument("--tag", default="e20")
-    ap.add_argument("--index-rate", type=float, default=0.75)
+    ap.add_argument("--index-rate", type=float, default=0.0)
     ap.add_argument("--protect", type=float, default=0.33)
     ap.add_argument("--pitch", type=int, default=0)
     ap.add_argument("--f0-method", default="rmvpe")

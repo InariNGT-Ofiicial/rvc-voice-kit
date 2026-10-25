@@ -132,7 +132,13 @@ def cmd_convert(a: argparse.Namespace) -> int:
     f0 = a.f0 or rec.get("f0_method", "rmvpe")
     protect = a.protect if a.protect is not None else float(rec.get("protect", 0.33))
     pitch = a.pitch if a.pitch is not None else int(rec.get("pitch", 0))
-    ir = a.index_rate if a.index_rate is not None else float(rec.get("index_rate", 0.75))
+    # ★ 内置默认 index_rate = 0（不是 0.75）。
+    #   理由：added_IVF1929 检索在高音帧会匹配到**低八度**的相似向量，RVC 照着错音高合成
+    #   （实测同一 15 s 窗口：ir=0 → 769.7 Hz 正确；ir=0.75 → 410.5 Hz 低八度）。
+    #   且 ir=0 的音色保真**不降反升**（LTAS 相关 0.7356 vs 0.7283）。
+    #   ⚠ 若某个 manifest 的 recommended_infer.index_rate 仍写着 0.75，这里会照读它 ⇒
+    #     **改 manifest 时必须同步改这个字段**，否则缺陷会静默复活。
+    ir = a.index_rate if a.index_rate is not None else float(rec.get("index_rate", 0.0))
     if v["index"] is None and ir > 0:
         print("[voice] 无索引，index_rate 归零", file=sys.stderr)
         ir = 0.0

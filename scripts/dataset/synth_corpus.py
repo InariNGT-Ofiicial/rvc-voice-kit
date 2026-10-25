@@ -151,8 +151,24 @@ def synth_edge(texts, out: Path, a) -> list[dict]:
         )
     ver = tuple(int(x) for x in edge_tts.__version__.split(".")[:2])
     if ver < (7, 3):
-        print(f"[synth] ★ 警告：edge-tts {edge_tts.__version__} < 7.3，"
-              f"大概率在 WSS 握手时 403（不是网络问题，是客户端版本太旧）", file=sys.stderr)
+        # ★ 7.2.8 会在 WSS 握手时 403（Sec-MS-GEC 算法落后），不是网络问题。
+        #   环境里常常同时存在两个版本：CosyVoice env 的 site-packages 里是 7.2.8，
+        #   而新版是用 pip --target 装在别处、靠 PYTHONPATH 抢先加载的。
+        #   ⇒ 报错时把「怎么用上新版」直接给出来，别只说「升级」。
+        inject = os.environ.get("RVCX_EDGETTS_LIB", "").strip()
+        hint = []
+        if inject:
+            hint.append(f"        已设 RVCX_EDGETTS_LIB={inject}")
+        hint += [
+            "        注入新版（不改任何已装 env）：",
+            "          pip install --target <注入目录> \"edge-tts>=7.3.0\"",
+            "          set PYTHONPATH=<注入目录>            # Windows: set PYTHONPATH=...",
+            "        也可设 RVCX_EDGETTS_LIB=<注入目录> 后由调用方注入 sys.path",
+        ]
+        raise SystemExit(
+            f"[synth] edge-tts {edge_tts.__version__} < 7.3，握手会 403。\n"
+            + "\n".join(hint)
+        )
 
     async def one(sem, t, tmp: Path):
         async with sem:

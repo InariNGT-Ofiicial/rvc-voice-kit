@@ -2,7 +2,8 @@
      <ROOT> 工作根 / <REPO> 上游 clone / <PY> venv 解释器 / <MODELS> 音色库 /
      <FFMPEG_DIR> ffmpeg 目录 / <COSY> CosyVoice2 / <COSY_SRC> 其源码目录 /
      <COSY_ENV> 其 venv / <PRESETS> 音色预设 / <DATASET_SRC> 原始训练集 /
-     <REPORT> 交付目录 / <WORKSPACE> 工作区 / <DSH_HOME> DSH 配置目录。
+     <REPORT> 交付目录 / <WORKSPACE> 工作区 / <AGENT_CWD> agent 工作目录 /
+     <DSH_HOME> DSH 配置目录 / <CODEX> Codex 工作区。
      本仓库实际以 rvcx/paths.py + rvcx.local.toml 解析这些路径。 -->
 
 # 现有 RVC / DDSP 音色模型接驳 dsh-qq 与 AstrBot

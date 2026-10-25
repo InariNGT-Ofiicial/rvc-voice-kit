@@ -2,7 +2,8 @@
      <ROOT> 工作根 / <REPO> 上游 clone / <PY> venv 解释器 / <MODELS> 音色库 /
      <FFMPEG_DIR> ffmpeg 目录 / <COSY> CosyVoice2 / <COSY_SRC> 其源码目录 /
      <COSY_ENV> 其 venv / <PRESETS> 音色预设 / <DATASET_SRC> 原始训练集 /
-     <REPORT> 交付目录 / <WORKSPACE> 工作区 / <DSH_HOME> DSH 配置目录。
+     <REPORT> 交付目录 / <WORKSPACE> 工作区 / <AGENT_CWD> agent 工作目录 /
+     <DSH_HOME> DSH 配置目录 / <CODEX> Codex 工作区。
      本仓库实际以 rvcx/paths.py + rvcx.local.toml 解析这些路径。 -->
 
 # DS娘 RVC 音色模型制作方案
@@ -221,13 +222,18 @@ RVC 的切片窗是 **3.7 s**。句子长度直接决定切片质量：
 ```
 本次实测用的是隔离安装（`--target`）到 `<ROOT>/_edgetts_probe/lib`，通过 `PYTHONPATH` 注入，没有污染任何现有 env。
 
+> ★ **本机同时存在两个 edge-tts 版本**，容易看错：
+> `<AI_SONG>/02_模型推理_DDSP-SVC-6.2/DDSP-barbara-6.2/env/Lib/site-packages/edge_tts` 是 **7.2.8**
+> （CosyVoice env 的 `sys.path` 指过去，所以在那里 `import edge_tts` 拿到的是 7.2.8）；
+> 隔离注入目录里是 **7.3.1**。`import` 按 `sys.path` 顺序取，**`PYTHONPATH` 优先** ⇒ 实际生效的是 7.3.1。
+> `synth_corpus.py` 现在在版本 < 7.3 时**直接报错并打印注入方法**（不再只是警告，免得白跑一轮才发现 403）。
+
 ### 5.1 语料生成
 
 ★ 需要 `pypinyin`，本机只在 CosyVoice env 里有。注意那个 python 是 **3.10、没有 `tomllib`**，`rvcx.paths` 读不到 `rvcx.local.toml`（`COSY=None`）——脚本已对此做了特判（直接问 `jieba.__file__`）。
 
 ```bash
-cd <WORKSPACE>/rvc-voice-kit
-<COSY_ENV>/Scripts/python.exe scripts/dataset/gen_corpus.py \
+cd <WORKSPACE>s/python.exe scripts/dataset/gen_corpus.py \
     --out <ROOT>/corpus/dsxiaoyi_a3 --sentences 300 --seed 20261026
 ```
 
@@ -501,6 +507,71 @@ powershell -Command "Invoke-CimMethod -ClassName Win32_Process -MethodName Creat
 | pypinyin 只在 CosyVoice env | 语料脚本在 RVC venv 里跑不起来 | 已内置明确报错与路径提示 |
 | preprocess 吞异常 | 退出码 0、切片 0 个 | 已内置「数产物」判据 |
 | 忘记 mute 样本 | 气口喷噪 | 已内置自动追加 2 行 |
+
+---
+
+## 9. 执行记录（2026-10-26 00:00 起）
+
+### 9.1 探针阶段（已完成）
+
+- 语料 35 条 / **2.78 分钟**，`edge` 后端合成，写盘前 dtype+峰值闸全部通过。
+- 数据链全通：`preprocess → extract_f0(rmvpe) → extract_hubert → filelist`，
+  产出 62 个切片。训练跑 2 轮做连通性验证（`D_2333333.pth` + `added_IVF222` 索引）。
+- 跨引擎对照（附录 B）已完成，结论见 §7.1。
+
+### 9.2 全量阶段（进行中）
+
+| 项 | 实际值 |
+|---|---|
+| 语料 | 300 句 → edge 合成 **279 条 / 24.11 分钟**（24 kHz） |
+| 与芳乃对齐度 | 芳乃 358 条 / 24.82 分钟 ⇒ **语料规模几乎一致**（97%） |
+| 数据链 | 已完成（`2a_f0` / `3_feature768` / `filelist.txt` 120 KB） |
+| 训练 | `--exp dsxiaoyi_a3_v1 --epochs 150 --bs 4 --se 20 --f0method rmvpe` |
+| 每轮耗时 | 66 s（与训练并行跑 TTS 服务时会涨到 84 s） |
+| 预计完成 | 150 轮 × 66 s ≈ **2 小时 45 分** |
+
+### 9.3 ★ 交叉验证集的做法被实测修正了
+
+§5.3 原写「另跑一次 `gen_corpus.py --seed 不同`」。**实测行不通**：
+
+```
+训练集 300 句 | 交叉集 73 句 | 重叠 73 句
+```
+
+`gen_corpus.py` 的**模板句（自然句）是固定的**，只有「枚举句」随 seed 变。
+换一个 seed 并不能产生独立文本。
+
+**改用的做法（已执行）**：从训练集里取 25 句（8 句自然 + 17 句枚举），
+**改由 CosyVoice2 重新合成**：
+
+```bash
+<cosy-env>/python scripts/dataset/synth_corpus.py --backend cosy \
+    --texts <ROOT>/corpus/dsxiaoyi_xval/text.txt \
+    --out <ROOT>/dataset/dsxiaoyi_xval --cosy-ref <reference.wav>
+```
+
+结果：23/25 条成功（2 条 <1 s 被质检丢弃），总时长 1.75 分钟，墙钟 204.7 s，
+**削顶样本 0、量级修正 0 条**。
+
+**为什么这样才对**：交叉验证集要隔离的变量是**音频同源**（24 kHz 带宽指纹、
+同一个 TTS 的机器味），而不是文本。文本在训练集里出现过，对 RVC 不构成
+过拟合——它学的是声学分布与说话人嵌入，不是文本-音素的对齐表。
+换成 CosyVoice2 之后：码流、带宽、韵律全不同，但克隆的是同一份 `reference.wav`
+⇒ **音色家族相同，信道不同**，这正是 §7.1 第 2 条要的效果。
+
+> 顺带修正一处表述：§7.1 第 2 条说 CosyVoice 的 Δr 只能当「下限估计」，
+> 因为它自己有漂移（实测 f0 极差 3.65 半音）。但既然交叉集与训练集**同音色**，
+> 这个漂移对「音色是否还在」的判断影响不大——**它影响的是绝对 Δr 的数值**，
+> 所以这条修正的前提是「只比较换声前后，不比较绝对值」。
+
+### 9.4 部署侧的一个连带发现
+
+接驳线（另一条线）实测发现 **faiss 打不开含中文的 index 路径**：
+路径存在、权限正常，但 faiss 的 C++ 文件层不认非 ASCII，
+**不抛到上层、只打 traceback，然后静默按 `index_rate=0` 跑**。
+
+⇒ 这直接影响本方案：DS娘 的 index 会落在含中文的音色库目录下，
+接驳时必须先做 ASCII 镜像（`svc_rvc.py` 已内置 `ascii_mirror()`，实测生效）。
 
 ---
 

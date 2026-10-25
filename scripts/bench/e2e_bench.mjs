@@ -6,13 +6,26 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 
 const run = promisify(execFile);
-const FF = "D:/AI-Song/01_人声分离_MSST-GUI/env/ffmpeg.exe";
+const FF = process.env.FFMPEG_PATH
+  || (process.env.RVCX_FFMPEG_DIR ? `${process.env.RVCX_FFMPEG_DIR}/ffmpeg.exe` : "ffmpeg");
 const text = process.argv[2] ?? "今天天气真不错，我们出去走走吧。";
 const runs = Number(process.argv[3] ?? 3);
-const outDir = "D:/WorkData/2026-10-19-03-29-21/rvc-research/audio/e2e";
+const outDir = process.argv[4] ?? join(process.cwd(), "e2e");
 mkdirSync(outDir, { recursive: true });
 
-const { encode } = await import("file:///D:/WorkData/2026-10-19-03-29-21/rvc-research/silk-test/node_modules/silk-wasm/lib/index.mjs");
+// silk-wasm 的位置不写死：先试包名，再试同级目录，最后试环境变量
+const { encode } = await (async () => {
+  const candidates = [
+    () => import("silk-wasm"),
+    () => import(new URL("./node_modules/silk-wasm/lib/index.mjs", import.meta.url).href),
+    () => import(new URL("../../silk-test/node_modules/silk-wasm/lib/index.mjs", import.meta.url).href),
+    () => import(process.env.SILK_WASM_PATH),
+  ].filter(Boolean);
+  for (const c of candidates) {
+    try { return await c(); } catch { /* 继续试下一个 */ }
+  }
+  throw new Error("找不到 silk-wasm：npm i silk-wasm，或设 SILK_WASM_PATH 指向 lib/index.mjs");
+})();
 
 const rows = [];
 for (let i = 0; i < runs; i++) {
